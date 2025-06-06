@@ -1,19 +1,41 @@
+using DotNetSpaAuth.Data;
 using DotNetSpaAuth.Dtos;
+using DotNetSpaAuth.Models;
 using DotNetSpaAuth.Services;
 using DotNetSpaAuth.Validators;
 using FluentValidation;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
+
+var connectionString = builder.Configuration.GetConnectionString("Default") ?? "Data Source=App.db";
+
+builder.Services.AddDbContext<AppDbContext>(options => options.UseSqlite(connectionString));
+
+builder.Services.AddIdentityApiEndpoints<User>()
+    .AddEntityFrameworkStores<AppDbContext>();
+
+builder.Services.AddCors();
+builder.Services.AddAuthentication().AddJwtBearer();
+builder.Services.AddAuthorization();
 
 builder.Services.AddOpenApi();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-//Services
-builder.Services.AddSingleton<UserService>();
+// Services
+builder.Services.AddScoped<UserService>();
 
-//Validators
+builder.Services.Configure<IdentityOptions>(options =>
+{
+    options.SignIn.RequireConfirmedAccount = false;
+    options.SignIn.RequireConfirmedEmail = false;
+    options.SignIn.RequireConfirmedPhoneNumber = false;
+});
+
+// Validators
 builder.Services.AddValidatorsFromAssemblyContaining<SigninRequestValidator>();
 
 var app = builder.Build();
@@ -28,6 +50,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+
 // Crea un gruppo con prefisso "/api"
 var api = app.MapGroup("/v1");
 
@@ -37,31 +60,16 @@ api.MapGet("/", () => TypedResults.Ok(new ApiStatus()
 }
 ));
 
-var usersGroup = api.MapGroup("/users");
-
-usersGroup.MapPost("/signin", ([FromBody] SigninRequest user, IValidator<SigninRequest> validator) =>
-{
-    var validationResult = validator.Validate(user);
-
-    if (!validationResult.IsValid)
-    {
-        var errors = validationResult.Errors
-            .GroupBy(e => e.PropertyName)
-            .ToDictionary(
-                g => g.Key,
-                g => g.Select(e => e.ErrorMessage).ToArray());
-        return Results.BadRequest(new { Message = "Validation failed", Errors = errors });
-    }
-
-    return Results.Ok($"User for email: {user.Email} created successfully!");
-
-});
-usersGroup.MapPost("/login", () => { });
-usersGroup.MapGet("/status", () => { });
-
 app.MapGet("/", () =>
 {
     return Results.Redirect("/v1");
 });
+
+app.UseCors();
+app.UseAuthentication();
+app.UseAuthorization();
+
+app.MapIdentityApi<User>();
+
 
 app.Run();
