@@ -1,4 +1,5 @@
 using DotNetSpaAuth.Dtos;
+using DotNetSpaAuth.Services;
 using DotNetSpaAuth.Validators;
 using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
@@ -8,6 +9,11 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddOpenApi();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+//Services
+builder.Services.AddSingleton<UserService>();
+
+//Validators
 builder.Services.AddValidatorsFromAssemblyContaining<SigninRequestValidator>();
 
 var app = builder.Build();
@@ -25,10 +31,11 @@ app.UseHttpsRedirection();
 // Crea un gruppo con prefisso "/api"
 var api = app.MapGroup("/v1");
 
-api.MapGet("/", () => new
+api.MapGet("/", () => TypedResults.Ok(new ApiStatus()
 {
     Status = "api works"
-});
+}
+));
 
 var usersGroup = api.MapGroup("/users");
 
