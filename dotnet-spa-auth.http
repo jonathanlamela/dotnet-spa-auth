@@ -1,0 +1,6 @@
+@dotnet_spa_auth_HostAddress = http://localhost:5162
+
+GET {{dotnet_spa_auth_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
