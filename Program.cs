@@ -1,10 +1,13 @@
+using System.Security.Claims;
 using DotNetSpaAuth.Data;
 using DotNetSpaAuth.Dtos;
 using DotNetSpaAuth.Models;
 using DotNetSpaAuth.Services;
 using DotNetSpaAuth.Validators;
 using FluentValidation;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -69,7 +72,22 @@ app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapIdentityApi<User>();
+var authGroup = api.MapGroup("/auth");
+
+
+authGroup.MapGet("/status", async Task<Results<Ok<object>, ValidationProblem, NotFound>>
+ (ClaimsPrincipal claimsPrincipal, [FromServices] IServiceProvider sp) =>
+{
+    var userManager = sp.GetRequiredService<UserManager<User>>();
+    if (await userManager.GetUserAsync(claimsPrincipal) is not { } user)
+    {
+        return TypedResults.NotFound();
+    }
+    object data = new { user.Email, user.Firstname, user.Lastname };
+    return TypedResults.Ok(data);
+});
+
+authGroup.MapIdentityApi<User>();
 
 
 app.Run();
