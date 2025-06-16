@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using DotNetSpaAuth.Data;
 using DotNetSpaAuth.Dtos;
+using DotNetSpaAuth.Endpoints;
 using DotNetSpaAuth.Models;
 using DotNetSpaAuth.Services;
 using DotNetSpaAuth.Validators;
@@ -72,22 +73,7 @@ app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
 
-var authGroup = api.MapGroup("/auth");
-
-
-authGroup.MapGet("/status", async Task<Results<Ok<object>, ValidationProblem, NotFound>>
- (ClaimsPrincipal claimsPrincipal, [FromServices] IServiceProvider sp) =>
-{
-    var userManager = sp.GetRequiredService<UserManager<User>>();
-    if (await userManager.GetUserAsync(claimsPrincipal) is not { } user)
-    {
-        return TypedResults.NotFound();
-    }
-    object data = new { user.Email, user.Firstname, user.Lastname };
-    return TypedResults.Ok(data);
-});
-
-authGroup.MapIdentityApi<User>();
+app.MapAuthEndpoints();
 
 
 app.Run();
